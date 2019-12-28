@@ -1,15 +1,8 @@
-UTILS=utils/timestamp.c utils/timestamp.h utils/purchase.c utils/purchase.h
-OBJS=main.o timestamp.o purchase.o
+budgeting: ll.o budgeting.o
+	gcc -o budgeting ll.o budgeting.o
 
+budgeting.o: budgeting.c
+	gcc -c budgeting.c
 
-budget: $(OBJS)
-	gcc -o budget $^
-
-main.o: main.c $(UTILS)
-	gcc -c main.c
-
-purchase.o: utils/purchase.c utils/purchase.h
-	gcc -c utils/purchase.c 
-
-timestamp.o: utils/timestamp.c utils/timestamp.h
-	gcc -c utils/timestamp.c
+ll.o: ll.c ll.h
+	gcc -c ll.c
