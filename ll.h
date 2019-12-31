@@ -8,6 +8,7 @@
 
 typedef struct nd
 {
+    int deposit; // if zero, then this transaction is a withdrawl, else a deposit
     time_t date;
     char *desc;
     float amt;
@@ -22,9 +23,12 @@ typedef struct ll
     float monthly_budget;
     float weekly_budget;
     int size;
+    float current_weekly;
+    float current_monthly;
+    float balance;
 } ledger;
 
-transac *new_transaction(char *dsc, float a, time_t dt);
+transac *new_transaction(char *dsc, float a, time_t dt, int deposit);
 
 void print_transaction(transac *t);
 

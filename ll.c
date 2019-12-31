@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "ll.h"
 
-transac *new_transaction(char *dsc, float a, time_t dt)
+transac *new_transaction(char *dsc, float a, time_t dt, int dep)
 {
     transac *new = malloc(sizeof(transac));
     new -> desc = calloc(strlen(dsc) + 1, sizeof(char));
@@ -12,6 +12,7 @@ transac *new_transaction(char *dsc, float a, time_t dt)
     new -> date = dt;
     new -> amt = a;
     new -> next = NULL;
+    new -> deposit = dep;
     return new;
 }
 
@@ -37,14 +38,19 @@ transac *transaction_from_string(char *s)
     int year, month, day, hour, min;
     float amt;
     char *dsc = calloc(50, sizeof(char));
+    char *dep = calloc(20, sizeof(char));
 
-    sscanf(data, "%d/%d/%d %d:%d,%[^\t\n,],%f",
+    sscanf(data, "%d/%d/%d %d:%d,%[^\t\n,],%f,%s",
            &month, &day, &year, &hour, &min,
-           dsc, &amt);
+           dsc, &amt, dep);
+
+    int deposit = 0;
+    if (!strcmp(dep, "DEPOSIT"))
+        deposit = 1;
 
     time_t tme = time_from_ints(day, month, year, hour, min);    
 
-    transac *t = new_transaction(dsc, amt, tme);
+    transac *t = new_transaction(dsc, amt, tme, deposit);
     free(dsc);
     return t;
 }
@@ -76,6 +82,9 @@ ledger *blank_ledger(time_t start, float monthly, float weekly)
     l -> start_time = start;
     l -> monthly_budget = monthly;
     l -> weekly_budget = weekly;
+    l -> current_weekly = weekly;
+    l -> current_monthly = monthly;
+    l -> balance = 0;
     return l;
 }
 
@@ -96,6 +105,19 @@ void append_transac(ledger *l, transac *t)
         l -> tail = t;
         l -> size++;
     }
+    time_t current_time = time(NULL);
+    int current_month = (*localtime(&current_time)).tm_mon;
+    int current_week = (*localtime(&current_time)).tm_mday / 7;
+    int transac_month = (*localtime(&(t -> date))).tm_mon;
+    int transac_week = (*localtime(&(t -> date))).tm_mday / 7;
+    int d = t -> deposit ? 1 : -1;
+    l -> balance += t -> amt * d;
+    if (current_month == transac_month) {
+        l -> current_monthly += t -> amt * d;
+        if (current_week == transac_week) {
+            l -> current_weekly += t -> amt * d;
+        }
+    }
 }
 
 ledger *ledger_from_file(time_t start, float monthly, float weekly, FILE *f)
@@ -111,6 +133,9 @@ ledger *ledger_from_file(time_t start, float monthly, float weekly, FILE *f)
             append_transac(l, transaction_from_string(line));
         }
     }
+    else {
+        printf("Invalid/missing file provided. Using blank ledger...\n");
+    }
     return l;
 }
 
@@ -118,6 +143,10 @@ void print_ledger(ledger *l)
 {
     transac *curr = l -> head;
     int counter = 0;
+    printf("=======BUDGET DETAILS=======\n");
+    printf(" -- balance: %f\n", l -> balance);
+    printf(" -- amount remaining this month: %f\n", l -> current_monthly);
+    printf(" -- amount remaining this week: %f\n", l -> current_weekly);
     printf("=====TRANSACTION HISTORY=====\n");
     while (curr) {
         ++counter;

@@ -3,9 +3,8 @@
 #include <string.h>
 #include <fcntl.h>
 #include "ll.h"
+#include "iohandler.h"
 
-#define MONTHLY_BUDGET 500
-#define WEEKLY_BUDGET 100
 #define DEFAULT_TIME time_from_ints(1, 1, 2019, 0, 0)
 
 int find(char *needle, char **haystack, int n)
@@ -26,14 +25,34 @@ int main(int argc, char *argv[])
             -w <WEEKLY_BUDGET> -> set custom weekly budget
             -m <MONTHLY_BUDGET> -> set custom monthly budget
     */
+    int monthly = 500;
+    int weekly = 100;
     FILE *ledger_f = NULL;
     int ix;
     if ((ix = find("-f", argv, argc)) > 0)
         ledger_f = fopen(argv[ix + 1], "r+");
-    ledger *l = ledger_from_file(DEFAULT_TIME, MONTHLY_BUDGET, WEEKLY_BUDGET,
-                                f);
+    if ((ix = find("-w", argv, argc)) > 0) {
+        weekly = atoi(argv[ix + 1]);
+    }
+    if ((ix = find("-m", argv, argc)) > 0) {
+        monthly = atoi(argv[ix + 1]);
+    }
+    ledger *l = ledger_from_file(DEFAULT_TIME, monthly, weekly, ledger_f);
+
+    char input[256];
+    char c;
+    while (1) {
+        printf("input> ");
+        scanf("%[^\t\n,]", input);
+        do {
+            c = getchar();
+        } while (c != '\n' && c != EOF);
+        parse_cmd(input, l);
+    }
 
 
-    fclose(l)
+    free_ledger(l);
+    if (ledger_f)
+        fclose(ledger_f);
     return 0;
 }
